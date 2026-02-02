@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wireframe Bottle</title>
+    <style>
+        body { margin: 0; padding: 0; background: #6a6565; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const f = 1000;
+const cameraZ = 20;
+
+const vertices = [];
+const faces = [];
+
+const rings = 15;
+const segments = 12;
+const bottleHeight = 300;
+
+for (let r = 0; r < rings; r++) {
+    const y = (r / (rings - 1) * bottleHeight) - bottleHeight / 2;
+    let radius;
+    const t = r / (rings - 1);
+
+    if (t < 0.1) radius = 40 * (1 + t * 2);
+    else if (t < 0.3) radius = 60;
+    else if (t < 0.6) radius = 70;
+    else if (t < 0.8) radius = 45;
+    else if (t < 0.95) radius = 25;
+    else radius = 30;
+
+    for (let s = 0; s < segments; s++) {
+        const a = (s / segments) * Math.PI * 2;
+        vertices.push([
+            radius * Math.cos(a),
+            y,
+            radius * Math.sin(a)
+        ]);
+    }
+}
+
+for (let r = 0; r < rings - 1; r++) {
+    for (let s = 0; s < segments; s++) {
+        const n = (s + 1) % segments;
+        const v1 = r * segments + s;
+        const v2 = r * segments + n;
+        const v3 = (r + 1) * segments + s;
+        const v4 = (r + 1) * segments + n;
+        faces.push([v1, v2, v3]);
+        faces.push([v2, v4, v3]);
+    }
+}
+
+let angleY = 0;
+
+function rotateY(x, y, z, a) {
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    return [
+        x * c + z * s,
+        y,
+        -x * s + z * c
+    ];
+}
+
+function project(x, y, z) {
+    const zz = z + cameraZ;
+    const scale = f / (zz + f);
+    return [
+        x * scale + canvas.width / 2,
+        -y * scale + canvas.height / 2
+    ];
+}
+
+function render() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    angleY += 0.01;
+
+    const projected = [];
+    for (const v of vertices) {
+        const r = rotateY(v[0], v[1], v[2], angleY);
+        projected.push(project(r[0], r[1], r[2]));
+    }
+
+    ctx.strokeStyle = '#0f0';
+    ctx.lineWidth = 1;
+
+    for (const f of faces) {
+        const p1 = projected[f[0]];
+        const p2 = projected[f[1]];
+        const p3 = projected[f[2]];
+
+        ctx.beginPath();
+        ctx.moveTo(p1[0], p1[1]);
+        ctx.lineTo(p2[0], p2[1]);
+        ctx.lineTo(p3[0], p3[1]);
+        ctx.closePath();
+        ctx.stroke();
+    }
+
+    requestAnimationFrame(render);
+}
+
+render();
+</script>
+</body>
+</html>
